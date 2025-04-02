@@ -7,12 +7,26 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         .withInput("Input", juce::AudioChannelSet::stereo(), true)
         .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
     apvts(*this, nullptr, "Parameters", createParams()) {
+    driveParam = apvts.getRawParameterValue("drive");
+    mixParam = apvts.getRawParameterValue("mix");
+    outputParam = apvts.getRawParameterValue("output");
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout AudioPluginAudioProcessor::createParams() {
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         "GAIN", "Gain", juce::NormalisableRange<float>(0.0f, 1.0f), 0.5f));
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "drive", "Drive", juce::NormalisableRange<float>(1.0f, 30.0f, 0.1f), 1.0f));
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "mix", "Mix", juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f), 1.0f));
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "output", "Output", juce::NormalisableRange<float>(-24.0f, 6.0f, 0.1f), 0.0f));
+
+
     return { params.begin(), params.end() };
 }
 
@@ -132,8 +146,12 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    float gain = apvts.getRawParameterValue("GAIN")->load();
-    buffer.applyGain(gain);
+    const float drive = *driveParam;
+    const float mix = *mixParam;
+    const float outputGain = juce::Decibels::decibelsToGain(outputParam->load());
+
+
+
 
     // In case we have more outputs than inputs, this code clears any output
     // channels that didn't contain input data, (because these aren't
@@ -153,9 +171,18 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
         auto* channelData = buffer.getWritePointer(channel);
-        juce::ignoreUnused(channelData);
+        for (int i = 0; i < buffer.getNumSamples(); ++i)
+        {
+            float input = channelData[i];
+            float driven = std::tanh(input * drive);
+            channelData[i] = (1.0f - mix) * input + mix * driven;
+            channelData[i] *= outputGain;
+        }
         // ..do something to the data...
     }
+
+    float gain = apvts.getRawParameterValue("GAIN")->load();
+    buffer.applyGain(gain);
 }
 
 //==============================================================================

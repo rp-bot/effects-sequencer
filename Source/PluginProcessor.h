@@ -42,6 +42,11 @@ public:
     void getStateInformation(juce::MemoryBlock& destData) override;
     void setStateInformation(const void* data, int sizeInBytes) override;
     juce::AudioProcessorValueTreeState apvts;
+
+    std::atomic<float>* driveParam = nullptr;
+    std::atomic<float>* mixParam = nullptr;
+    std::atomic<float>* outputParam = nullptr;
+
 private:
     juce::AudioProcessorValueTreeState::ParameterLayout createParams();
     //==============================================================================

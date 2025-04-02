@@ -72,7 +72,7 @@ juce_add_plugin("${PROJECT_NAME}"
     # COMPANY_EMAIL                             # An email address for this target's author. The value is inherited from JUCE_COMPANY_EMAIL.
     PLUGIN_MANUFACTURER_CODE Famu               # A four-character manufacturer id with at least one upper-case character.
                                                 # GarageBand 10.3 requires the first letter to be upper-case, and the remaining letters to be lower-case.
-    PLUGIN_CODE Gem0                            # A unique four-character plugin id with exactly one upper-case character.
+    PLUGIN_CODE Gdd0                            # A unique four-character plugin id with exactly one upper-case character.
                                                 # GarageBand 10.3 requires the first letter to be upper-case, and the remaining letters to be lower-case.
 
     IS_SYNTH FALSE                              # Is this a synth or an effect?
