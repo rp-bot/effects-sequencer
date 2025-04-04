@@ -14,6 +14,11 @@ set(LIB_JUCE_TAG "7.0.8")
 
 # Xcode: Disable automatic build scheme generation globally.
 #        Instead, we explicitely specify which targets require schemes.
+
+set(CMAKE_BUILD_TYPE Release)
+
+# find_package(OpenMP REQUIRED)
+
 set(CMAKE_XCODE_GENERATE_SCHEME OFF)
 
 # IDEs:  Enable grouping of source files into folders in IDEs.
@@ -59,9 +64,13 @@ FetchContent_MakeAvailable(juce)
 # Check the readme at `docs/CMake API.md` in the JUCE repo for the full list.
 
 juce_add_plugin("${PROJECT_NAME}"
-    FORMATS AU VST3                             # The formats to build. Valid formats: Standalone Unity VST3 AU AUv3 AAX VST LV2.
+    VERSION 0.1
+    FORMATS AU VST3 Standalone                            # The formats to build. Valid formats: Standalone Unity VST3 AU AUv3 AAX VST LV2.
                                                 # AU and AUv3 plugins will only be enabled when building on macOS.
     PRODUCT_NAME "EffectSequencer"              # The name of the final executable, which can differ from the target name.
+    PLUGIN_NAME "EffectSequencer"
+    
+    BUNDLE_ID "com.lofrac.EffectSequencer"
     # PLUGIN_NAME                               # Name of the plugin that will be displayed in the DAW. Can differ from PRODUCT_NAME.
 
     # ICON_BIG                                  # ICON_* arguments specify a path to an image file to use as an icon for the Standalone.
@@ -70,9 +79,9 @@ juce_add_plugin("${PROJECT_NAME}"
     # COMPANY_WEBSITE                           # The address of a website related to this target in some way.
                                                 # The value is inherited from JUCE_COMPANY_WEBSITE.
     # COMPANY_EMAIL                             # An email address for this target's author. The value is inherited from JUCE_COMPANY_EMAIL.
-    PLUGIN_MANUFACTURER_CODE Famu               # A four-character manufacturer id with at least one upper-case character.
+    PLUGIN_MANUFACTURER_CODE Lfrc               # A four-character manufacturer id with at least one upper-case character.
                                                 # GarageBand 10.3 requires the first letter to be upper-case, and the remaining letters to be lower-case.
-    PLUGIN_CODE Gdd0                            # A unique four-character plugin id with exactly one upper-case character.
+    PLUGIN_CODE Effs                            # A unique four-character plugin id with exactly one upper-case character.
                                                 # GarageBand 10.3 requires the first letter to be upper-case, and the remaining letters to be lower-case.
 
     IS_SYNTH FALSE                              # Is this a synth or an effect?
@@ -92,7 +101,7 @@ juce_add_plugin("${PROJECT_NAME}"
                                                 # kAudioUnitType_MusicEffect, kAudioUnitType_OfflineEffect, kAudioUnitType_Output,
                                                 # kAudioUnitType_Panner
 
-    COPY_PLUGIN_AFTER_BUILD FALSE)              # Should the plugin be installed to a default location after building?
+    COPY_PLUGIN_AFTER_BUILD TRUE)              # Should the plugin be installed to a default location after building?
                                                 # NOTE: Writing to the default install locations might require administrator privileges on Windows.
 
 # Set the C++ language standard requirenment for the "shared code" library target.
