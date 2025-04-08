@@ -11,4 +11,4 @@ target_sources("${PROJECT_NAME}"
         PluginProcessor.cpp)
 
 # Add subdirectories with source files, if present
-# add_subdirectory(<name>)
+add_subdirectory(components/DistortionControls)

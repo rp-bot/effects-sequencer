@@ -18,7 +18,27 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudi
 
     volumeAttachment = std::make_unique<SliderAttachment>(processorRef.apvts, "GAIN", volumeSlider);
 
-    setSize(500, 200);
+    // Chat display (read-only log)
+    chatDisplay.setMultiLine(true);
+    chatDisplay.setReadOnly(true);
+    chatDisplay.setScrollbarsShown(true);
+    chatDisplay.setColour(juce::TextEditor::backgroundColourId, juce::Colours::darkgrey);
+    chatDisplay.setColour(juce::TextEditor::textColourId, juce::Colours::white);
+    addAndMakeVisible(chatDisplay);
+
+    // Chat input
+    chatInput.setMultiLine(false);
+    chatInput.setTextToShowWhenEmpty("Type message...", juce::Colours::grey);
+    chatInput.setColour(juce::TextEditor::backgroundColourId, juce::Colours::black);
+    chatInput.setColour(juce::TextEditor::textColourId, juce::Colours::white);
+    addAndMakeVisible(chatInput);
+
+    // Submit button
+    submitButton.setButtonText("Send");
+    submitButton.onClick = [this] { handleSubmit(); };
+    addAndMakeVisible(submitButton);
+
+    setSize(1000, 500);
 
 
 }
@@ -51,6 +71,14 @@ void AudioPluginAudioProcessorEditor::resized()
     mixSlider.setBounds(margin + sliderWidth + margin, margin, sliderWidth, sliderHeight);
     outputSlider.setBounds(margin + 2 * (sliderWidth + margin), margin, sliderWidth, sliderHeight);
     volumeSlider.setBounds(margin + 3 * (sliderWidth + margin), margin, sliderWidth, sliderHeight);
+
+    const int chatX = margin + 3 * (sliderWidth + margin);
+    const int chatWidth = getWidth() - chatX - margin;
+
+    chatDisplay.setBounds(chatX, margin, chatWidth, getHeight() - 60);
+    chatInput.setBounds(chatX, getHeight() - 50, chatWidth - 60, 30);
+    submitButton.setBounds(chatX + chatWidth - 55, getHeight() - 50, 50, 30);
+
 }
 
 void AudioPluginAudioProcessorEditor::configureSlider(juce::Slider& slider, juce::Label& label, const juce::String& name)
@@ -64,4 +92,18 @@ void AudioPluginAudioProcessorEditor::configureSlider(juce::Slider& slider, juce
     label.setJustificationType(juce::Justification::centred);
     label.setColour(juce::Label::textColourId, juce::Colours::white);
     addAndMakeVisible(label);
+}
+
+void AudioPluginAudioProcessorEditor::handleSubmit()
+{
+    const juce::String userText = chatInput.getText().trim();
+
+    if (userText.isNotEmpty())
+    {
+        chatDisplay.moveCaretToEnd();
+        chatDisplay.insertTextAtCaret("You: " + userText + "\n");
+        chatInput.clear();
+
+        // TODO: Add response integration here later
+    }
 }
