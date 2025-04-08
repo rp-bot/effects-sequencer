@@ -15,7 +15,7 @@ set(LIB_JUCE_TAG "7.0.8")
 # Xcode: Disable automatic build scheme generation globally.
 #        Instead, we explicitely specify which targets require schemes.
 
-set(CMAKE_BUILD_TYPE Release)
+# set(CMAKE_BUILD_TYPE Release)
 
 # find_package(OpenMP REQUIRED)
 

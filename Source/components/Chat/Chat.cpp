@@ -16,7 +16,7 @@ Chat::Chat()
     addAndMakeVisible(chatInput);
 
     submitButton.setButtonText("Send");
-    submitButton.onClick = [this] { handleSubmit(); };
+    submitButton.onClick = [this] { sendRequest(chatInput.getText().trim()); };
     addAndMakeVisible(submitButton);
 }
 
@@ -28,15 +28,41 @@ void Chat::handleSubmit()
     {
         chatDisplay.moveCaretToEnd();
         chatDisplay.insertTextAtCaret("You: " + userText + "\n");
-        chatInput.clear();
 
         // Hook for external response logic
     }
 }
 
-void Chat::resized(){
+void Chat::resized() {
     auto area = getLocalBounds().reduced(10);
     chatDisplay.setBounds(area.removeFromTop(getHeight() - 60));
     chatInput.setBounds(area.removeFromLeft(getWidth() - 60));
     submitButton.setBounds(area);
+}
+
+
+void Chat::sendRequest(const juce::String& userMessage)
+{
+
+    juce::URL url("https://postman-echo.com/get?message=" + userMessage.replace(" ", "%20"));
+
+    juce::Thread::launch([this, url]() {
+        auto response = url.readEntireTextStream();
+
+        juce::MessageManager::callAsync([this, response]() {
+            handleResponse(response);
+            });
+        });
+}
+
+void Chat::handleResponse(const juce::String& response)
+{
+    chatInput.clear();
+
+    auto json = juce::JSON::parse(response);
+    if (auto* obj = json.getDynamicObject())
+    {
+        auto args = obj->getProperty("args").toString();
+        chatDisplay.insertTextAtCaret("Bot: " + args + "\n");
+    }
 }
