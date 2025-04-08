@@ -12,3 +12,4 @@ target_sources("${PROJECT_NAME}"
 
 # Add subdirectories with source files, if present
 add_subdirectory(components/DistortionControls)
+add_subdirectory(components/Chat)
