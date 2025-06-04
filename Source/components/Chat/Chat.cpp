@@ -48,7 +48,7 @@ void Chat::sendRequest(const juce::String& userMessage)
 {
     juce::String encodedMessage = juce::URL::addEscapeChars(userMessage, true, false);
 
-    juce::URL url("http://postman-echo.com/get?message=" + encodedMessage);
+    juce::URL url("https://postman-echo.com/get?message=" + encodedMessage);
     
     chatDisplay.moveCaretToEnd();
     chatDisplay.insertTextAtCaret("Sending request to: " + url.toString(true) + "\n"); // Log URL
