@@ -1,6 +1,6 @@
 # Effects Sequencer
 
-An audio effect which allows you to sequence dsp modules + AI chat bots
+An audio effect which allows you to sequence dsp modules + AI chat bots to assist with understanding how to use the plugin and parameter tuning.
 
 ## Debug Builds
 
