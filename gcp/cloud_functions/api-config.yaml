@@ -1,0 +1,28 @@
+swagger: "2.0"
+info:
+  title: audio-agent-api
+  description: API for the JUCE Audio Agent
+  version: 1.0.0
+schemes:
+  - https
+produces:
+  - application/json
+paths:
+  /get-parameters:
+    post:
+      summary: Takes a text prompt and returns audio parameters.
+      operationId: get-parameters
+      x-google-backend:
+        address: YOUR_FUNCTION_URL
+      security:
+        - api_key: []
+      responses:
+        "200":
+          description: A successful response
+          schema:
+            type: string
+securityDefinitions:
+  api_key:
+    type: "apiKey"
+    name: "x-api-key"
+    in: "header"
