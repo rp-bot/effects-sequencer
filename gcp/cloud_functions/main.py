@@ -3,9 +3,9 @@
 
 import functions_framework
 import vertexai
-# We import GenerativeModel for the Gemini family of models
-from vertexai.generative_models import GenerativeModel
+from vertexai.generative_models import GenerativeModel, Part
 import json
+import base64
 
 # --- Configuration ---
 GCP_PROJECT_ID = "effect-sequencer"
@@ -21,12 +21,12 @@ model = GenerativeModel("gemini-2.0-flash-001")
 @functions_framework.http
 def get_audio_parameters(request):
     """
-    HTTP Cloud Function to translate a sound description into parameters.
+    HTTP Cloud Function to analyze and describe an audio clip.
     """
     headers = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, x-api-key', # Allow the API key header
+        'Access-Control-Allow-Headers': 'Content-Type, x-api-key',
         'Access-Control-Max-Age': '3600'
     }
 
@@ -37,33 +37,50 @@ def get_audio_parameters(request):
     try:
         request_json = request.get_json(silent=True)
 
-        if not request_json or 'prompt' not in request_json:
-            return (json.dumps({"error": "Invalid request. 'prompt' field is missing."}), 400, headers)
+        if not request_json or not all(k in request_json for k in ['audio_data', 'mime_type']):
+            error_msg = "Invalid request. 'audio_data' and 'mime_type' fields are required."
+            return (json.dumps({"error": error_msg}), 400, headers)
 
-        user_prompt = request_json['prompt']
+        base64_audio = request_json['audio_data']
+        mime_type = request_json['mime_type']
 
-        # --- V1 Meta-Prompt ---
-        meta_prompt = f"""
-        You are a synthesizer programming assistant.
-        Your task is to take a user's description of a sound and return a JSON object with parameter values.
+        audio_bytes = base64.b64decode(base64_audio)
 
-        The user wants this sound: "{user_prompt}"
-
-        Respond with a JSON object that has two keys: 'cutoff' (a value from 0 to 100) and 'resonance' (a value from 0 to 100).
-        Do not add any other text or explanation. Only return the JSON.
+        # --- 1. Construct the Descriptive Prompt ---
+        # This prompt now asks the model for a textual description of the audio.
+        meta_prompt = """
+        You are an expert audio analyst. Listen to the provided audio clip carefully.
+        
+        Your task is to describe the sonic characteristics of the audio.
+        
+        Respond with a JSON object containing your analysis. The JSON object should have two keys:
+        1. "description": A one-sentence summary of the sound.
+        2. "characteristics": A list of three to five key descriptive words or phrases (e.g., "Deep sub bass", "Aggressive mid-range", "Crisp high-end", "Heavily compressed", "Reverberant space").
+        
+        Only return the raw JSON object. Do not add any other text or explanation.
         """
 
-        # Call the Gemini API using the generate_content method
-        response = model.generate_content(meta_prompt)
+        # --- 2. Call the Gemini API with Multimodal Input ---
+        response = model.generate_content([
+            meta_prompt,
+            Part.from_data(data=audio_bytes, mime_type=mime_type)
+        ])
         
         raw_model_output = response.text
-        
-        final_headers = headers.copy()
-        final_headers['Content-Type'] = 'application/json'
-
-        return (raw_model_output, 200, final_headers)
+        return (raw_model_output, 200, headers)
+        # --- 3. Server-Side JSON Validation (Best Practice) ---
+        # try:
+        #     parsed_json = json.loads(raw_model_output)
+        #     validated_output = json.dumps(parsed_json)
+        #     final_headers = headers.copy()
+        #     final_headers['Content-Type'] = 'application/json'
+        #     return (validated_output, 200, final_headers)
+        # except (json.JSONDecodeError, TypeError):
+        #     error_message = json.dumps({"error": "Model returned invalid JSON."})
+        #     return (error_message, 500, headers)
 
     except Exception as e:
         error_message = json.dumps({"error": f"An internal error occurred: {str(e)}"})
+        # Reset content type for JSON error response
+        headers['Content-Type'] = 'application/json'
         return (error_message, 500, headers)
-

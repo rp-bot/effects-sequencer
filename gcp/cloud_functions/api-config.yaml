@@ -13,16 +13,23 @@ paths:
       summary: Takes a text prompt and returns audio parameters.
       operationId: get-parameters
       x-google-backend:
-        address: YOUR_FUNCTION_URL
+        address: https://us-central1-effect-sequencer.cloudfunctions.net/get_audio_parameters
+      # This security definition now points to the name "api_key_name"
       security:
-        - api_key: []
+        - api_key_name: []
       responses:
         "200":
           description: A successful response
           schema:
             type: string
+
+# Top-level security definition that links the key to the service
+security:
+  - api_key_name: []
+
 securityDefinitions:
-  api_key:
+  # The name here ("api_key_name") must match what's used in the security sections
+  api_key_name:
     type: "apiKey"
     name: "x-api-key"
     in: "header"
