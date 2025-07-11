@@ -71,6 +71,7 @@ juce_add_plugin("${PROJECT_NAME}"
     PLUGIN_NAME "EffectSequencer"
     
     BUNDLE_ID "com.lofrac.EffectSequencer"
+    NEEDS_CURL TRUE                                       # Enable networking support
     # PLUGIN_NAME                               # Name of the plugin that will be displayed in the DAW. Can differ from PRODUCT_NAME.
 
     # ICON_BIG                                  # ICON_* arguments specify a path to an image file to use as an icon for the Standalone.
@@ -132,7 +133,7 @@ target_compile_definitions("${PROJECT_NAME}"
     PUBLIC
         # JUCE_WEB_BROWSER and JUCE_USE_CURL would be on by default, but you might not need them.
         JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_plugin` call
-        JUCE_USE_CURL=0     # If you remove this, add `NEEDS_CURL TRUE` to the `juce_add_plugin` call
+        # JUCE_USE_CURL is now enabled via NEEDS_CURL TRUE in juce_add_plugin
         JUCE_VST3_CAN_REPLACE_VST2=0)
 
 # If your target needs extra binary assets, you can add them here.

@@ -39,77 +39,70 @@ void Chat::handleSubmit()
 void Chat::resized() {
     auto area = getLocalBounds().reduced(10);
     chatDisplay.setBounds(area.removeFromTop(getHeight() - 60));
-    chatInput.setBounds(area.removeFromLeft(getWidth() - 60));
-    submitButton.setBounds(area);
+    
+    auto buttonArea = area.removeFromRight(80); // Space for submit button
+    submitButton.setBounds(buttonArea);
+    
+    chatInput.setBounds(area);
 }
 
 
-void Chat::sendRequest(const juce::String& userMessage)
+void Chat::sendRequest(const juce::String& base64AudioData)
 {
-    juce::String encodedMessage = juce::URL::addEscapeChars(userMessage, true, false);
+    // 1. Define the API endpoint and get API key from environment
+    juce::URL url("GATE_WAY_URL");
+    juce::String apiKey = "API_KEY"; // Replace with your key if necessary
 
-    juce::URL url("https://postman-echo.com/get?message=" + encodedMessage);
-    
+    // 2. Create the JSON request body
+    juce::var requestBodyJson;
+    auto* requestObject = new juce::DynamicObject();
+    requestObject->setProperty("mime_type", "audio/octet-stream");
+    requestObject->setProperty("audio_data", base64AudioData);
+    requestBodyJson = requestObject;
+    juce::String jsonString = juce::JSON::toString(requestBodyJson);
+
     chatDisplay.moveCaretToEnd();
-    chatDisplay.insertTextAtCaret("Sending request to: " + url.toString(true) + "\n"); // Log URL
+    chatDisplay.insertTextAtCaret("Bot: Sending audio data...\n");
 
-    juce::Thread::launch([this, url]() {
-        auto response = url.readEntireTextStream();
-
-        juce::MessageManager::callAsync([this, response]() {
-            handleResponse(response);
+    // 3. Launch the network request on a separate thread
+    juce::Thread::launch([this, url, apiKey, jsonString]() {
+        // Use JUCE's HTTP API (suppress deprecation warning until newer API is stable)
+        auto postUrl = url.withPOSTData(jsonString);
+        
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        if (auto stream = postUrl.createInputStream(false, nullptr, nullptr, 
+            "Content-Type: application/json\r\nx-api-key: " + apiKey + "\r\n", 15000))
+        #pragma clang diagnostic pop
+        {
+            const juce::String response = stream->readEntireStreamAsString();
+            
+            // Switch back to the main message thread to update the UI
+            juce::MessageManager::callAsync([this, response]() {
+                handleResponse(response);
             });
-        });
+        }
+        else
+        {
+            juce::MessageManager::callAsync([this]() {
+                handleResponse("Error: Could not connect to the API server. Please check your internet connection and API configuration.");
+            });
+        }
+    });
 }
 
 void Chat::handleResponse(const juce::String& response)
 {
     chatInput.clear(); // Clear input after trying to send
-
     chatDisplay.moveCaretToEnd(); // Ensure caret is at the end before new messages
 
     if (response.isEmpty())
     {
-
         chatDisplay.insertTextAtCaret("Bot: Error - No response from server.\n");
         return;
     }
 
-    juce::var json; // Use juce::var for easier parsing and checking
-    juce::Result parseResult = juce::JSON::parse(response, json);
-
-    if (parseResult.wasOk())
-    {
-        // DBG("JSON Parsed OK: " + juce::JSON::toString(json));
-        // juce::Logger::writeToLog("JSON Parsed OK: " + juce::JSON::toString(json));
-
-        if (auto* obj = json.getDynamicObject())
-        {
-            if (auto* args = obj->getProperty("args").getDynamicObject())
-            {
-                auto message = args->getProperty("message").toString();
-                if (message.isNotEmpty())
-                {
-                    chatDisplay.insertTextAtCaret("Bot: " + message + "\n");
-                }
-                else
-                {
-                    chatDisplay.insertTextAtCaret("Bot: Error - Malformed response (missing message).\n");
-                }
-            }
-            else
-            {
-                chatDisplay.insertTextAtCaret("Bot: Error - Malformed response (missing args).\n");
-            }
-        }
-        else
-        {
-            chatDisplay.insertTextAtCaret("Bot: Error - Response format is not a JSON object.\n");
-        }
-    }
-    else
-    {
-        chatDisplay.insertTextAtCaret("Bot: Error - Failed to parse server response.\n");
-        chatDisplay.insertTextAtCaret("Raw response was: " + response + "\n");
-    }
+    // Simply display the raw response for now
+    chatDisplay.insertTextAtCaret("Bot: " + response + "\n");
 }
+
