@@ -168,6 +168,14 @@ curl -X POST \
   https://YOUR_GATEWAY_URL/get-parameters
 ```
 
+```bash
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: YOUR_API_KEY" \
+  -d @request.json \
+  https://YOUR_GATEWAY_URL/get-parameters
+```
+
 A successful JSON response confirms the entire system is deployed correctly and securely.
 
 ```json
