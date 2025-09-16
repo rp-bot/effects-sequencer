@@ -22,6 +22,19 @@ paths:
           description: A successful response
           schema:
             type: string
+  /effects-advice:
+    post:
+      summary: Returns brief advice about audio effects.
+      operationId: effects-advice
+      x-google-backend:
+        address: https://us-central1-effect-sequencer.cloudfunctions.net/get_effects_advice
+      security:
+        - api_key_name: []
+      responses:
+        "200":
+          description: A successful response
+          schema:
+            type: string
 
 # Top-level security definition that links the key to the service
 security:

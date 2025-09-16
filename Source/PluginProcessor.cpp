@@ -10,6 +10,13 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     driveParam = apvts.getRawParameterValue("drive");
     mixParam = apvts.getRawParameterValue("mix");
     outputParam = apvts.getRawParameterValue("output");
+    reverbMixParam = apvts.getRawParameterValue("reverbMix");
+    reverbRoomParam = apvts.getRawParameterValue("reverbRoom");
+    reverbDampingParam = apvts.getRawParameterValue("reverbDamping");
+    reverbWidthParam = apvts.getRawParameterValue("reverbWidth");
+    reverbFreezeParam = apvts.getRawParameterValue("reverbFreeze");
+    chainSwapParam = apvts.getRawParameterValue("chainOrderSwap");
+    masterDryWetParam = apvts.getRawParameterValue("masterDryWet");
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout AudioPluginAudioProcessor::createParams() {
@@ -26,6 +33,22 @@ juce::AudioProcessorValueTreeState::ParameterLayout AudioPluginAudioProcessor::c
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         "output", "Output", juce::NormalisableRange<float>(-24.0f, 6.0f, 0.1f), 0.0f));
 
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "reverbMix", "Reverb Mix", juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f), 0.2f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "reverbRoom", "Reverb Room", juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f), 0.5f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "reverbDamping", "Reverb Damping", juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f), 0.5f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "reverbWidth", "Reverb Width", juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f), 1.0f));
+    params.push_back(std::make_unique<juce::AudioParameterBool>(
+        "reverbFreeze", "Reverb Freeze", false));
+
+    params.push_back(std::make_unique<juce::AudioParameterBool>(
+        "chainOrderSwap", "Swap Order (Reverb -> Distortion)", false));
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "masterDryWet", "Master Dry/Wet", juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f), 1.0f));
 
     return { params.begin(), params.end() };
 }
@@ -104,7 +127,8 @@ void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerB
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
-    juce::ignoreUnused(sampleRate, samplesPerBlock);
+    juce::ignoreUnused(samplesPerBlock);
+    reverb.reset();
 }
 
 void AudioPluginAudioProcessor::releaseResources()
@@ -147,8 +171,14 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
     const float drive = *driveParam;
-    const float mix = *mixParam;
+    const float distMix = *mixParam;
     const float outputGain = juce::Decibels::decibelsToGain(outputParam->load());
+    const float revMix = *reverbMixParam;
+    const float revRoom = *reverbRoomParam;
+    const float revDamping = *reverbDampingParam;
+    const float revWidth = *reverbWidthParam;
+    const bool revFreeze = (*reverbFreezeParam) > 0.5f;
+    const bool swap = (*chainSwapParam) > 0.5f; // false: Dist->Rev, true: Rev->Dist
 
 
 
@@ -168,17 +198,72 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // the samples and the outer loop is handling the channels.
     // Alternatively, you can process the samples with the channels
     // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
+    juce::Reverb::Parameters rp;
+    rp.dryLevel = 1.0f - revMix;
+    rp.wetLevel = revMix;
+    rp.roomSize = revRoom;
+    rp.damping = revDamping;
+    rp.width = revWidth;
+    rp.freezeMode = revFreeze ? 1.0f : 0.0f;
+    reverb.setParameters(rp);
+
+    auto numSamples = buffer.getNumSamples();
+    // Save dry copy for master dry/wet
+    juce::AudioBuffer<float> dryBuffer;
+    dryBuffer.makeCopyOf(buffer);
+
+    auto applyDistortion = [&](int channelIndex)
     {
-        auto* channelData = buffer.getWritePointer(channel);
-        for (int i = 0; i < buffer.getNumSamples(); ++i)
+        auto* channelData = buffer.getWritePointer(channelIndex);
+        for (int i = 0; i < numSamples; ++i)
         {
             float input = channelData[i];
             float driven = std::tanh(input * drive);
-            channelData[i] = (1.0f - mix) * input + mix * driven;
-            channelData[i] *= outputGain;
+            channelData[i] = (1.0f - distMix) * input + distMix * driven;
         }
-        // ..do something to the data...
+    };
+
+    if (swap)
+    {
+        // Reverb → Distortion
+        if (totalNumInputChannels >= 2)
+            reverb.processStereo(buffer.getWritePointer(0), buffer.getWritePointer(1), numSamples);
+        else if (totalNumInputChannels == 1)
+            reverb.processMono(buffer.getWritePointer(0), numSamples);
+
+        for (int ch = 0; ch < totalNumInputChannels; ++ch)
+            applyDistortion(ch);
+    }
+    else
+    {
+        // Distortion → Reverb
+        for (int ch = 0; ch < totalNumInputChannels; ++ch)
+            applyDistortion(ch);
+
+        if (totalNumInputChannels >= 2)
+            reverb.processStereo(buffer.getWritePointer(0), buffer.getWritePointer(1), numSamples);
+        else if (totalNumInputChannels == 1)
+            reverb.processMono(buffer.getWritePointer(0), numSamples);
+    }
+
+    // Master dry/wet blend
+    const float masterMix = masterDryWetParam != nullptr ? masterDryWetParam->load() : 1.0f;
+    for (int ch = 0; ch < totalNumOutputChannels; ++ch)
+    {
+        auto* wet = buffer.getWritePointer(ch);
+        auto* dry = dryBuffer.getReadPointer(ch);
+        for (int i = 0; i < numSamples; ++i)
+        {
+            wet[i] = (1.0f - masterMix) * dry[i] + masterMix * wet[i];
+        }
+    }
+
+    // Final output gain
+    for (int channel = 0; channel < totalNumOutputChannels; ++channel)
+    {
+        auto* channelData = buffer.getWritePointer(channel);
+        for (int i = 0; i < numSamples; ++i)
+            channelData[i] *= outputGain;
     }
 
     float gain = apvts.getRawParameterValue("GAIN")->load();

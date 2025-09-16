@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_audio_basics/juce_audio_basics.h>
 
 //==============================================================================
 class AudioPluginAudioProcessor : public juce::AudioProcessor
@@ -46,9 +47,17 @@ public:
     std::atomic<float>* driveParam = nullptr;
     std::atomic<float>* mixParam = nullptr;
     std::atomic<float>* outputParam = nullptr;
+    std::atomic<float>* reverbMixParam = nullptr;
+    std::atomic<float>* reverbRoomParam = nullptr;
+    std::atomic<float>* reverbDampingParam = nullptr;
+    std::atomic<float>* reverbWidthParam = nullptr;
+    std::atomic<float>* reverbFreezeParam = nullptr;
+    std::atomic<float>* chainSwapParam = nullptr; // 0: Dist->Rev, 1: Rev->Dist
+    std::atomic<float>* masterDryWetParam = nullptr;
 
 private:
     juce::AudioProcessorValueTreeState::ParameterLayout createParams();
+    juce::Reverb reverb;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioPluginAudioProcessor)
 };

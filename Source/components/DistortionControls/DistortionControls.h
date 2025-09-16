@@ -9,6 +9,7 @@ public:
     DistortionControls(juce::AudioProcessorValueTreeState& apvts);
     ~DistortionControls() override;
 
+    void paint(juce::Graphics&) override;
     void resized() override;
 
 private:
@@ -16,6 +17,7 @@ private:
 
     juce::Slider driveSlider, mixSlider, outputSlider, volumeSlider;
     juce::Label driveLabel, mixLabel, outputLabel, volumeLabel;
+    juce::Label titleLabel { {}, "Distortion" };
 
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> driveAttachment, mixAttachment, outputAttachment, volumeAttachment;
 

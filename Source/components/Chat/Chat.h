@@ -14,12 +14,20 @@ public:
 
 
 private:
+    void setLoading(bool shouldLoad);
     void handleSubmit();
     void sendRequest(const juce::String& userMessage);
     void handleResponse(const juce::String& response);
+    void addMessage(const juce::String& text, bool isUser);
 
-    juce::TextEditor chatDisplay, chatInput;
+    // Bubble transcript
+    juce::Viewport transcriptViewport;
+    juce::Component transcriptContent;
+    juce::OwnedArray<juce::Component> bubbles;
+    juce::TextEditor chatInput;
     juce::TextButton submitButton;
+    juce::Label loadingLabel;
+    bool isLoading = false;
 
 
 

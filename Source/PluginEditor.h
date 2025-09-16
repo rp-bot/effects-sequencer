@@ -2,6 +2,9 @@
 
 #include "PluginProcessor.h"
 #include "components/DistortionControls/DistortionControls.h"
+#include "components/ReverbControls/ReverbControls.h"
+#include "components/MainControls/MainControls.h"
+#include <juce_gui_basics/juce_gui_basics.h>
 #include "components/Chat/Chat.h"
 //==============================================================================
 class AudioPluginAudioProcessorEditor : public juce::AudioProcessorEditor
@@ -15,12 +18,18 @@ public:
     void resized() override;
 
 private:
+    void updateOrderUI();
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     // AudioPluginAudioProcessor& processorRef;
 
     DistortionControls distortionControls;
+    ReverbControls reverbControls;
+    MainControls mainControls;
+    juce::ToggleButton swapButton { "Click to swap" };
+    juce::ComboBox effectOrderLabel;
     Chat chatComponent;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> swapAttachment;
     // juce::Slider driveSlider, mixSlider, outputSlider, volumeSlider;
     // juce::Label driveLabel, mixLabel, outputLabel, volumeLabel;
 

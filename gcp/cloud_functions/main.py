@@ -84,3 +84,49 @@ def get_audio_parameters(request):
         # Reset content type for JSON error response
         headers['Content-Type'] = 'application/json'
         return (error_message, 500, headers)
+
+@functions_framework.http
+def get_effects_advice(request):
+    """
+    HTTP Cloud Function to give brief audio-effects advice based on a short prompt.
+    """
+    headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, x-api-key',
+        'Access-Control-Max-Age': '3600'
+    }
+
+    if request.method == 'OPTIONS':
+        return ('', 204, headers)
+
+    try:
+        request_json = request.get_json(silent=True)
+        if not request_json or 'prompt' not in request_json:
+            return (json.dumps({"error": "Invalid request. 'prompt' is required."}), 400, headers)
+
+        user_prompt = request_json['prompt']
+
+        system_prompt = (
+            "You are a concise audio-effects assistant. Provide brief, practical advice on effects "
+            "(EQ, compression, reverb, delay, saturation, modulation). Keep responses under 60 words, "
+            "use imperative phrasing, and avoid preambles. If the user asks about your identity, purpose, "
+            "or capabilities, reply with a single-sentence introduction of your role as an audio-effects assistant."
+        )
+
+        response = model.generate_content([
+            system_prompt + "\nUser: " + user_prompt + "\nResponse:"])
+
+        advice = response.text.strip() if hasattr(response, 'text') else ''
+        # Enforce brevity if model returns longer text
+        if len(advice) > 480:
+            advice = advice[:477] + '...'
+
+        final_headers = headers.copy()
+        final_headers['Content-Type'] = 'application/json'
+        return (json.dumps({"advice": advice}), 200, final_headers)
+
+    except Exception as e:
+        error_message = json.dumps({"error": f"An internal error occurred: {str(e)}"})
+        headers['Content-Type'] = 'application/json'
+        return (error_message, 500, headers)
